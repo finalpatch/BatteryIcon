@@ -8,7 +8,7 @@ uses
   Classes, SysUtils, Windows, JwaBatClass;
 
 const
-  DIGCF_PRESENT = $00000002;
+  DIGCF_PRESENT      = $00000002;
   DIGCF_DEVICEINTERFACE = $00000010;
   SetupApiModuleName = 'SetupApi.dll';
 
@@ -18,9 +18,9 @@ type
   PSPDeviceInterfaceData = ^TSPDeviceInterfaceData;
 
   SP_DEVICE_INTERFACE_DATA = packed record
-    cbSize: DWORD;
+    cbSize:   DWORD;
     InterfaceClassGuid: TGUID;
-    Flags: DWORD;
+    Flags:    DWORD;
     Reserved: ULONG_PTR;
   end;
   TSPDeviceInterfaceData = SP_DEVICE_INTERFACE_DATA;
@@ -28,17 +28,17 @@ type
   PSPDevInfoData = ^TSPDevInfoData;
 
   SP_DEVINFO_DATA = packed record
-    cbSize: DWORD;
+    cbSize:    DWORD;
     ClassGuid: TGUID;
-    DevInst: DWORD; // DEVINST handle
-    Reserved: ULONG_PTR;
+    DevInst:   DWORD; // DEVINST handle
+    Reserved:  ULONG_PTR;
   end;
   TSPDevInfoData = SP_DEVINFO_DATA;
 
   PSPDeviceInterfaceDetailDataA = ^TSPDeviceInterfaceDetailDataA;
 
   SP_DEVICE_INTERFACE_DETAIL_DATA_A = packed record
-    cbSize: DWORD;
+    cbSize:     DWORD;
     DevicePath: array [0..ANYSIZE_ARRAY - 1] of AnsiChar;
   end;
   TSPDeviceInterfaceDetailDataA = SP_DEVICE_INTERFACE_DETAIL_DATA_A;
@@ -65,7 +65,7 @@ type
   TBatteryInfo = class
   private
     hBat: HANDLE;
-    bws: TBatteryWaitStatus;
+    bws:  TBatteryWaitStatus;
   public
     constructor Create;
     destructor Destroy; override;
@@ -85,18 +85,17 @@ var
 
 constructor TBatteryInfo.Create;
 var
-  hDev: HDEVINFO;
-  iDev: integer;
-  did: TSPDeviceInterfaceData;
-  didd: PSPDeviceInterfaceDetailData;
-  res: BOOL;
+  hDev:   HDEVINFO;
+  iDev:   integer;
+  did:    TSPDeviceInterfaceData;
+  didd:   PSPDeviceInterfaceDetailData;
+  res:    BOOL;
   dwSize: DWORD;
-  bqi: TBatteryQueryInformation;
+  bqi:    TBatteryQueryInformation;
   dwWait: DWORD;
-  dwOut: DWORD;
+  dwOut:  DWORD;
 begin
   hBat := INVALID_HANDLE_VALUE;
-
   hDev := SetupDiGetClassDevs(@GUID_DEVICE_BATTERY, nil, 0, DIGCF_PRESENT or
     DIGCF_DEVICEINTERFACE);
   if hDev <> pointer(INVALID_HANDLE_VALUE) then
@@ -104,7 +103,8 @@ begin
     for iDev := 0 to 10 do
     begin
       did.cbSize := SizeOf(did);
-      res := SetupDiEnumDeviceInterfaces(hDev, nil, GUID_DEVICE_BATTERY, iDev, did);
+      res := SetupDiEnumDeviceInterfaces(hDev, nil,
+        GUID_DEVICE_BATTERY, iDev, did);
       if not res then
         break;
       dwSize := 0;
@@ -114,7 +114,8 @@ begin
         didd := AllocMem(dwSize);
         FillMemory(didd, dwSize, 0);
         didd^.cbSize := 8;
-        res := SetupDiGetDeviceInterfaceDetail(hDev, @did, didd, dwSize, dwSize, nil);
+        res := SetupDiGetDeviceInterfaceDetail(hDev, @did,
+          didd, dwSize, dwSize, nil);
         if res then
         begin
           // got a battery, open it
@@ -171,5 +172,3 @@ initialization
   pointer(SetupDiGetDeviceInterfaceDetail) :=
     GetProcAddress(SetupApiLib, 'SetupDiGetDeviceInterfaceDetailA');
 end.
-
-
