@@ -93,10 +93,13 @@ begin
 end;
 
 procedure TForm1.FormCreate(Sender: TObject);
+var
+  iconSize: Integer;
 begin
   bi := TBatteryInfo.Create;
   bm := TBitmap.Create;
-  bm.SetSize(24,24);
+  iconSize := Scale96ToFont(16);
+  bm.SetSize(iconSize, iconSize);
   bm.Canvas.Font.Name:='Segoe UI';
   bm.Canvas.Font.Size:=6;
   with bm.Canvas.TextStyle do begin

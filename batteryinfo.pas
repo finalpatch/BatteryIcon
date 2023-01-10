@@ -8,92 +8,92 @@ uses
   Classes, SysUtils, Windows, JwaBatClass;
 
 const
-  DIGCF_PRESENT      = $00000002;
+  DIGCF_PRESENT         = $00000002; 
   DIGCF_DEVICEINTERFACE = $00000010;
-  SetupApiModuleName = 'SetupApi.dll';
+  SetupApiModuleName    = 'SetupApi.dll';
 
 type
-  HDEVINFO = Pointer;
-
-  PSPDeviceInterfaceData = ^TSPDeviceInterfaceData;
-
-  SP_DEVICE_INTERFACE_DATA = packed record
-    cbSize:   DWORD;
-    InterfaceClassGuid: TGUID;
-    Flags:    DWORD;
-    Reserved: ULONG_PTR;
-  end;
-  TSPDeviceInterfaceData = SP_DEVICE_INTERFACE_DATA;
-
-  PSPDevInfoData = ^TSPDevInfoData;
-
-  SP_DEVINFO_DATA = packed record
-    cbSize:    DWORD;
-    ClassGuid: TGUID;
-    DevInst:   DWORD; // DEVINST handle
-    Reserved:  ULONG_PTR;
-  end;
-  TSPDevInfoData = SP_DEVINFO_DATA;
-
-  PSPDeviceInterfaceDetailDataA = ^TSPDeviceInterfaceDetailDataA;
-
+  HDEVINFO                          = Pointer;
+                                    
+  PSPDeviceInterfaceData            = ^TSPDeviceInterfaceData;
+                                    
+  SP_DEVICE_INTERFACE_DATA          = packed record
+                                        cbSize             : DWORD;
+                                        InterfaceClassGuid : TGUID;
+                                        Flags              : DWORD;
+                                        Reserved           : ULONG_PTR;
+                                      end;                 
+  TSPDeviceInterfaceData            = SP_DEVICE_INTERFACE_DATA;
+                                    
+  PSPDevInfoData                    = ^TSPDevInfoData;
+                                    
+  SP_DEVINFO_DATA                   = packed record
+                                        cbSize    : DWORD;
+                                        ClassGuid : TGUID;
+                                        DevInst   : DWORD; // DEVINST handle
+                                        Reserved  : ULONG_PTR;
+                                      end;        
+  TSPDevInfoData                    = SP_DEVINFO_DATA;
+                                    
+  PSPDeviceInterfaceDetailDataA     = ^TSPDeviceInterfaceDetailDataA;
+                                    
   SP_DEVICE_INTERFACE_DETAIL_DATA_A = packed record
-    cbSize:     DWORD;
-    DevicePath: array [0..ANYSIZE_ARRAY - 1] of AnsiChar;
-  end;
-  TSPDeviceInterfaceDetailDataA = SP_DEVICE_INTERFACE_DETAIL_DATA_A;
-  TSPDeviceInterfaceDetailData = TSPDeviceInterfaceDetailDataA;
-  PSPDeviceInterfaceDetailData = PSPDeviceInterfaceDetailDataA;
-
-  TSetupDiGetClassDevs = function(ClassGuid: PGUID; const aEnumerator: PTSTR;
+                                        cbSize     : DWORD;
+                                        DevicePath : array [0..ANYSIZE_ARRAY - 1] of AnsiChar;
+                                      end;         
+  TSPDeviceInterfaceDetailDataA     = SP_DEVICE_INTERFACE_DETAIL_DATA_A;
+  TSPDeviceInterfaceDetailData      = TSPDeviceInterfaceDetailDataA;
+  PSPDeviceInterfaceDetailData      = PSPDeviceInterfaceDetailDataA;
+                                    
+  TSetupDiGetClassDevs              = function(ClassGuid: PGUID; const aEnumerator: PTSTR;
     hwndParent: HWND; Flags: DWORD): HDEVINFO; stdcall;
-
-  TSetupDiDestroyDeviceInfoList = function(DeviceInfoSet: HDEVINFO): BOOL; stdcall;
-
-  TSetupDiEnumDeviceInterfaces = function(DeviceInfoSet: HDEVINFO;
+                                    
+  TSetupDiDestroyDeviceInfoList     = function(DeviceInfoSet: HDEVINFO): BOOL; stdcall;
+                                    
+  TSetupDiEnumDeviceInterfaces      = function(DeviceInfoSet: HDEVINFO;
     DeviceInfoData: PSPDevInfoData; const InterfaceClassGuid: TGUID;
     MemberIndex: DWORD; var DeviceInterfaceData: TSPDeviceInterfaceData): BOOL; stdcall;
-
-  TSetupDiGetDeviceInterfaceDetail = function(DeviceInfoSet: HDEVINFO;
+                                    
+  TSetupDiGetDeviceInterfaceDetail  = function(DeviceInfoSet: HDEVINFO;
     DeviceInterfaceData: PSPDeviceInterfaceData;
     DeviceInterfaceDetailData: PSPDeviceInterfaceDetailData;
     DeviceInterfaceDetailDataSize: DWORD; var RequiredSize: DWORD;
     Device: PSPDevInfoData): BOOL; stdcall;
-
-  { TBatteryInfo }
-
-  TBatteryInfo = class
-  private
-    hBat: HANDLE;
-    bws:  TBatteryWaitStatus;
-  public
+                                    
+  { TBatteryInfo }                  
+                                    
+  TBatteryInfo                      = class
+   private
+    hBat : HANDLE;
+    bws  : TBatteryWaitStatus;
+   public
     constructor Create;
     destructor Destroy; override;
     function GetBatteryStatus: TBatteryStatus;
-  end;
+  end;   
 
 implementation
 
 var
-  SetupApiLib: HINST;
-  SetupDiGetClassDevs: TSetupDiGetClassDevs;
-  SetupDiDestroyDeviceInfoList: TSetupDiDestroyDeviceInfoList;
-  SetupDiEnumDeviceInterfaces: TSetupDiEnumDeviceInterfaces;
-  SetupDiGetDeviceInterfaceDetail: TSetupDiGetDeviceInterfaceDetail;
-
-{ TBatteryInfo }
+  SetupApiLib                     : HINST;
+  SetupDiGetClassDevs             : TSetupDiGetClassDevs;
+  SetupDiDestroyDeviceInfoList    : TSetupDiDestroyDeviceInfoList;
+  SetupDiEnumDeviceInterfaces     : TSetupDiEnumDeviceInterfaces;
+  SetupDiGetDeviceInterfaceDetail : TSetupDiGetDeviceInterfaceDetail;
+                                  
+{ TBatteryInfo }                  
 
 constructor TBatteryInfo.Create;
 var
-  hDev:   HDEVINFO;
-  iDev:   integer;
-  did:    TSPDeviceInterfaceData;
-  didd:   PSPDeviceInterfaceDetailData;
-  res:    BOOL;
-  dwSize: DWORD;
-  bqi:    TBatteryQueryInformation;
-  dwWait: DWORD;
-  dwOut:  DWORD;
+  hDev   : HDEVINFO;
+  iDev   : integer;
+  did    : TSPDeviceInterfaceData;
+  didd   : PSPDeviceInterfaceDetailData;
+  res    : BOOL;
+  dwSize : DWORD;
+  bqi    : TBatteryQueryInformation;
+  dwWait : DWORD;
+  dwOut  : DWORD;
 begin
   hBat := INVALID_HANDLE_VALUE;
   hDev := SetupDiGetClassDevs(@GUID_DEVICE_BATTERY, nil, 0, DIGCF_PRESENT or
@@ -155,10 +155,10 @@ end;
 
 function TBatteryInfo.GetBatteryStatus: TBatteryStatus;
 var
-  dwOut: DWORD;
+  dwOut : DWORD;
 begin
   DeviceIoControl(hBat, IOCTL_BATTERY_QUERY_STATUS, @bws, sizeof(bws), @Result,
-    sizeof(TBatteryStatus), @dwOut, nil);
+                  sizeof(TBatteryStatus), @dwOut, nil);
 end;
 
 initialization
