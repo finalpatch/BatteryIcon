@@ -66,9 +66,13 @@ type
    private
     hBat : HANDLE;
     bws  : TBatteryWaitStatus;
+    procedure OpenBattery;
+    function QueryStatus(out Status: TBatteryStatus): Boolean;
    public
     constructor Create;
     destructor Destroy; override;
+    procedure Reset;
+    function TryGetBatteryStatus(out Status: TBatteryStatus): Boolean;
     function GetBatteryStatus: TBatteryStatus;
   end;   
 
@@ -84,6 +88,20 @@ var
 { TBatteryInfo }                  
 
 constructor TBatteryInfo.Create;
+begin
+  inherited Create;
+  hBat := INVALID_HANDLE_VALUE;
+end;
+
+procedure TBatteryInfo.Reset;
+begin
+  if hBat <> INVALID_HANDLE_VALUE then
+    CloseHandle(hBat);
+  hBat := INVALID_HANDLE_VALUE;
+  FillChar(bws, SizeOf(bws), 0);
+end;
+
+procedure TBatteryInfo.OpenBattery;
 var
   hDev   : HDEVINFO;
   iDev   : integer;
@@ -95,13 +113,14 @@ var
   dwWait : DWORD;
   dwOut  : DWORD;
 begin
-  hBat := INVALID_HANDLE_VALUE;
+  Reset;
   hDev := SetupDiGetClassDevs(@GUID_DEVICE_BATTERY, nil, 0, DIGCF_PRESENT or
     DIGCF_DEVICEINTERFACE);
   if hDev <> pointer(INVALID_HANDLE_VALUE) then
   begin
     for iDev := 0 to 10 do
     begin
+      FillChar(did, SizeOf(did), 0);
       did.cbSize := SizeOf(did);
       res := SetupDiEnumDeviceInterfaces(hDev, nil,
         GUID_DEVICE_BATTERY, iDev, did);
@@ -113,7 +132,11 @@ begin
       begin
         didd := AllocMem(dwSize);
         FillMemory(didd, dwSize, 0);
+        {$IFDEF WIN64}
         didd^.cbSize := 8;
+        {$ELSE}
+        didd^.cbSize := 5;
+        {$ENDIF}
         res := SetupDiGetDeviceInterfaceDetail(hDev, @did,
           didd, dwSize, dwSize, nil);
         if res then
@@ -130,14 +153,19 @@ begin
             res := DeviceIoControl(hBat, IOCTL_BATTERY_QUERY_TAG,
               @dwWait, sizeof(dwWait), @bqi.BatteryTag,
               sizeof(bqi.BatteryTag), @dwOut, nil);
-            if res then
+            if res and (dwOut = SizeOf(bqi.BatteryTag)) and
+              (bqi.BatteryTag <> 0) then
             begin
               FillMemory(@bws, Sizeof(bws), 0);
               bws.BatteryTag := bqi.BatteryTag;
-            end;
+            end else
+              Reset;
           end;
         end;
         FreeMem(didd);
+        // Keep the first usable battery; do not overwrite/leak its handle.
+        if hBat <> INVALID_HANDLE_VALUE then
+          Break;
       end;
     end;
     SetupDiDestroyDeviceInfoList(hDev);
@@ -146,19 +174,40 @@ end;
 
 destructor TBatteryInfo.Destroy;
 begin
-  if (INVALID_HANDLE_VALUE <> hBat) then
-  begin
-    CloseHandle(hBat);
-  end;
+  Reset;
   inherited Destroy;
 end;
 
-function TBatteryInfo.GetBatteryStatus: TBatteryStatus;
+function TBatteryInfo.QueryStatus(out Status: TBatteryStatus): Boolean;
 var
   dwOut : DWORD;
 begin
-  DeviceIoControl(hBat, IOCTL_BATTERY_QUERY_STATUS, @bws, sizeof(bws), @Result,
-                  sizeof(TBatteryStatus), @dwOut, nil);
+  FillChar(Status, SizeOf(Status), 0);
+  Result := (hBat <> INVALID_HANDLE_VALUE) and
+    DeviceIoControl(hBat, IOCTL_BATTERY_QUERY_STATUS, @bws, SizeOf(bws),
+      @Status, SizeOf(Status), @dwOut, nil) and (dwOut = SizeOf(Status));
+end;
+
+function TBatteryInfo.TryGetBatteryStatus(out Status: TBatteryStatus): Boolean;
+begin
+  if hBat = INVALID_HANDLE_VALUE then
+    OpenBattery;
+  Result := QueryStatus(Status);
+  if not Result then begin
+    // Battery tags and device handles can become invalid across suspend.
+    OpenBattery;
+    Result := QueryStatus(Status);
+  end;
+  if not Result then begin
+    Reset;
+    FillChar(Status, SizeOf(Status), 0);
+    Status.Rate := LongInt(BATTERY_UNKNOWN_RATE);
+  end;
+end;
+
+function TBatteryInfo.GetBatteryStatus: TBatteryStatus;
+begin
+  TryGetBatteryStatus(Result);
 end;
 
 initialization
