@@ -7,7 +7,7 @@ uses
   cthreads,
   {$ENDIF}{$ENDIF}
   Interfaces, // this includes the LCL widgetset
-  Forms, main, batteryinfo;
+  Forms, main, batteryinfo, screenbrightness, Utilwmi;
 
 {$R *.res}
 

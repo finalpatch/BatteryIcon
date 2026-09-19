@@ -6,9 +6,11 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, StdCtrls, ExtCtrls,
-  Menus, JwaBatClass, BatteryInfo;
+  Menus, JwaBatClass, BatteryInfo, screenbrightness, IniFiles, LazLogger;
 
 type
+  PowerState = (AC, DC);
+
   { TForm1 }
 
   TForm1 = class(TForm)
@@ -24,6 +26,12 @@ type
     procedure Timer1Timer(Sender: TObject);
   private
     bi: TBatteryInfo;
+    //state: PowerState;
+    //brightnessctl: TScreenBrightness;
+    //settings : TIniFile;
+    //AcBrightness: BrightnessRange;
+    //DcBrightness: BrightnessRange;
+    procedure PrepareBitmap;
     procedure UpdateTrayIcon;
   public
   end;
@@ -39,7 +47,23 @@ implementation
 
 procedure TForm1.Timer1Timer(Sender: TObject);
 begin
+  PrepareBitmap;
   UpdateTrayIcon;
+end;
+
+procedure TForm1.PrepareBitmap;
+var
+  bmWidth: Integer;
+  bmHeight: Integer;
+  iconSize: Integer;
+begin
+  bm.GetSize(bmWidth, bmHeight);
+  iconSize := Scale96ToFont(32);
+  if (iconSize <> bmWidth) then begin
+    bm.SetSize(iconSize, iconSize);
+    bm.Canvas.Font.Size:= Scale96ToFont(16);
+    DebugLn('resize');
+  end;
 end;
 
 procedure TForm1.UpdateTrayIcon;
@@ -48,8 +72,48 @@ var
   newString: string;
   watts: single = 0.0;
   fmt: string;
+  //newState: PowerState;
+  //saveBrightness: BrightnessRange;
 begin
   bs := bi.GetBatteryStatus;
+
+  //if (bs.PowerState and BATTERY_POWER_ON_LINE) = 0 then
+  //  newState:=DC
+  //else
+  //  newState:=AC;
+  //
+  //if ((newState = DC) and (state = AC)) then begin
+  //  // AC => DC
+  //  Debugln('AC=>DC');
+  //  state:= newState;
+  //  saveBrightness := brightnessctl.GetBrightness;
+  //  DebugLn(['Current AC brightness ', saveBrightness]);
+  //  DebugLn(['Cached AC brightness ', AcBrightness]);
+  //  if saveBrightness <> AcBrightness then begin
+  //    AcBrightness:=saveBrightness;
+  //    settings.WriteInteger('Brightness', 'ac', AcBrightness);
+  //    DebugLn(['Update cached AC brightness to ', AcBrightness]);
+  //  end;
+  //  DebugLn(['Set DC brightness ', DcBrightness]);
+  //  brightnessctl.SetBrightness(DcBrightness);
+  //  DebugLn('Done');
+  //end else if ((newState = AC) and (state = DC)) then begin
+  //  // DC => AC
+  //  Debugln('DC=>AC');
+  //  state:= newState;
+  //  saveBrightness := brightnessctl.GetBrightness;
+  //  DebugLn(['Current DC brightness ', saveBrightness]);
+  //  DebugLn(['Cached DC brightness ', dcBrightness]);
+  //  if saveBrightness <> DcBrightness then begin
+  //    DcBrightness:=saveBrightness;
+  //    settings.WriteInteger('Brightness', 'dc', DcBrightness);
+  //    DebugLn(['Update cached DC brightness to ', DcBrightness]);
+  //  end;
+  //  DebugLn(['Set AC brightness ', AcBrightness]);
+  //  brightnessctl.SetBrightness(AcBrightness);
+  //  DebugLn('Done');
+  //end;
+
   if (bs.PowerState and BATTERY_CHARGING) <> 0 then begin
     newString := '>>';
   end else if (bs.PowerState and BATTERY_POWER_ON_LINE) <> 0 then begin
@@ -95,17 +159,34 @@ end;
 procedure TForm1.FormCreate(Sender: TObject);
 var
   iconSize: Integer;
+  //iniPath: string;
 begin
   bi := TBatteryInfo.Create;
   bm := TBitmap.Create;
-  iconSize := Scale96ToFont(16);
+  iconSize := Scale96ToFont(32);
   bm.SetSize(iconSize, iconSize);
   bm.Canvas.Font.Name:='Segoe UI';
-  bm.Canvas.Font.Size:=6;
+  bm.Canvas.Font.Size:= Scale96ToFont(16);
   with bm.Canvas.TextStyle do begin
     Alignment:=taCenter;
     Layout := tlCenter;
   end;
+  //brightnessctl:=TScreenBrightness.Create;
+  //if (bi.GetBatteryStatus.PowerState and BATTERY_POWER_ON_LINE) = 0 then
+  //  state:=DC
+  //else
+  //  state:=AC;
+  //iniPath:=ExtractFilePath(Application.ExeName) + 'battery.ini';
+  //settings:=TIniFile.Create(iniPath);
+  //if state = AC then begin
+  //  AcBrightness:= brightnessctl.GetBrightness;
+  //  settings.WriteInteger('Brightness', 'ac', AcBrightness);
+  //  DcBrightness:= settings.ReadInteger('Brightness', 'dc', 50);
+  //end else begin
+  //  AcBrightness:= settings.ReadInteger('Brightness', 'ac', 90);
+  //  DcBrightness:= brightnessctl.GetBrightness;
+  //  settings.WriteInteger('Brightness', 'dc', DcBrightness);
+  //end;
   UpdateTrayIcon;
 end;
 
@@ -113,6 +194,8 @@ procedure TForm1.FormDestroy(Sender: TObject);
 begin
   bi.Free;
   bm.Free;
+  //brightnessctl.Free;
+  //settings.Free;
 end;
 
 procedure TForm1.ExitMenuItemClick(Sender: TObject);

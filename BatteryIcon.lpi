@@ -102,7 +102,7 @@
         <PackageName Value="LCL"/>
       </Item1>
     </RequiredPackages>
-    <Units Count="3">
+    <Units Count="4">
       <Unit0>
         <Filename Value="BatteryIcon.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -119,6 +119,10 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="BatteryInfo"/>
       </Unit2>
+      <Unit3>
+        <Filename Value="screenbrightness.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit3>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -132,6 +136,9 @@
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Linking>
+      <Debugging>
+        <DebugInfoType Value="dsDwarf3"/>
+      </Debugging>
       <Options>
         <Win32>
           <GraphicApplication Value="True"/>
